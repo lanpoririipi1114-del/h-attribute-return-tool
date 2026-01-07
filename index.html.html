@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H属性 返送文言作成ツール</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 30px 0 40px;
+    }
+
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #f97316, #fb923c, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header h1::before {
+      content: "📦";
+      -webkit-text-fill-color: initial;
+    }
+
+    .header p {
+      color: #a0a0b0;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Card */
+    .card {
+      background: rgba(30, 30, 50, 0.8);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Tab Switcher */
+    .tab-switcher {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: #a0a0b0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Upload Area */
+    .upload-area {
+      border: 2px dashed rgba(34, 211, 238, 0.5);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(34, 211, 238, 0.05);
+    }
+
+    .upload-area:hover {
+      border-color: #22d3ee;
+      background: rgba(34, 211, 238, 0.1);
+    }
+
+    .upload-area.dragover {
+      border-color: #22d3ee;
+      background: rgba(34, 211, 238, 0.15);
+      transform: scale(1.02);
+    }
+
+    .upload-area.uploaded {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-text {
+      color: #e0e0e0;
+      font-size: 0.95rem;
+    }
+
+    .upload-subtext {
+      color: #808090;
+      font-size: 0.8rem;
+      margin-top: 6px;
+    }
+
+    .file-info {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 8px;
+      color: #22c55e;
+      font-size: 0.9rem;
+    }
+
+    .reset-btn {
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .reset-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* URL Input Area */
+    .url-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .url-input {
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+    }
+
+    .url-input::placeholder {
+      color: #606070;
+    }
+
+    .fetch-btn {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #22d3ee, #06b6d4);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .fetch-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(34, 211, 238, 0.4);
+    }
+
+    .fetch-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .url-hint {
+      font-size: 0.75rem;
+      color: #808090;
+      line-height: 1.5;
+    }
+
+    .url-hint a {
+      color: #22d3ee;
+      text-decoration: none;
+    }
+
+    .url-hint a:hover {
+      text-decoration: underline;
+    }
+
+    /* Form Inputs */
+    .form-section {
+      margin-bottom: 20px;
+    }
+
+    .form-section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-section-title.orange {
+      color: #fb923c;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-label {
+      font-size: 0.8rem;
+      color: #a0a0b0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-input {
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: #606070;
+    }
+
+    .form-input-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+    }
+
+    .form-input-row-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 80px 60px;
+      gap: 10px;
+    }
+
+    select.form-input {
+      cursor: pointer;
+    }
+
+    /* Checkbox */
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .checkbox-label input {
+      width: 18px;
+      height: 18px;
+      accent-color: #22c55e;
+      cursor: pointer;
+    }
+
+    /* Options Section */
+    .options-section {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .options-title {
+      font-size: 0.85rem;
+      color: #a0a0b0;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Generate Button */
+    .generate-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Output Area */
+    .output-area {
+      min-height: 300px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .output-placeholder {
+      color: #606070;
+      text-align: center;
+      padding-top: 100px;
+      font-size: 0.95rem;
+    }
+
+    .output-text {
+      white-space: pre-wrap;
+      line-height: 1.8;
+      font-size: 0.95rem;
+      color: #e0e0e0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 8px 16px;
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      border-radius: 6px;
+      color: #22c55e;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: none;
+      font-family: inherit;
+    }
+
+    .copy-btn:hover {
+      background: rgba(34, 197, 94, 0.3);
+    }
+
+    .copy-btn.visible {
+      display: block;
+    }
+
+    .copy-btn.copied {
+      background: #22c55e;
+      color: #fff;
+    }
+
+    /* Hidden file input */
+    #fileInput {
+      display: none;
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #22c55e;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      background: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>H属性 返送文言作成ツール</h1>
+      <p>Excelファイル または スプレッドシートURL → 発送情報を入力 → 文言を自動生成</p>
+    </header>
+
+    <div class="main-grid">
+      <!-- Column 1: Upload -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-number">1</div>
+          <h2 class="card-title">データを読み込む</h2>
+        </div>
+        
+        <!-- Tab Switcher -->
+        <div class="tab-switcher">
+          <button class="tab-btn active" onclick="switchTab('excel')">📁 Excelファイル</button>
+          <button class="tab-btn" onclick="switchTab('url')">🔗 スプシURL</button>
+        </div>
+
+        <!-- Excel Tab -->
+        <div class="tab-content active" id="tab-excel">
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">ここにExcelファイルをドロップ</div>
+            <div class="upload-subtext">または、クリックしてファイルを選択</div>
+          </div>
+          
+          <div class="file-info" id="fileInfo" style="display: none;"></div>
+          
+          <button class="reset-btn" id="resetBtn" style="display: none;" onclick="resetUpload()">
+            🔄 リセット
+          </button>
+        </div>
+
+        <!-- URL Tab -->
+        <div class="tab-content" id="tab-url">
+          <div class="url-input-area">
+            <input type="text" class="url-input" id="spreadsheetUrl" placeholder="スプレッドシートのURLを貼り付け">
+            <button class="fetch-btn" id="fetchBtn" onclick="fetchSpreadsheet()">
+              📥 データを取得
+            </button>
+            <div class="url-hint">
+              ※ スプレッドシートの共有設定を<br>
+              「リンクを知っている全員が閲覧可」にしてください<br>
+              ※ シート2のデータを自動で取得します
+            </div>
+          </div>
+          
+          <div class="file-info" id="urlInfo" style="display: none;"></div>
+          
+          <button class="reset-btn" id="resetUrlBtn" style="display: none;" onclick="resetUrl()">
+            🔄 リセット
+          </button>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      </div>
+
+      <!-- Column 2: Input Form -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-number">2</div>
+          <h2 class="card-title">発送情報を入力</h2>
+        </div>
+
+        <div class="form-section">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">📅 日付</label>
+              <input type="text" class="form-input" id="inputDate" placeholder="例: 1/5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">📍 返送先</label>
+              <input type="text" class="form-input" id="inputStore" placeholder="例: 名谷店">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title orange">📦 発送情報</div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">追跡番号</label>
+            <input type="text" class="form-input" id="inputTracking" placeholder="例: 454324255221">
+          </div>
+          <div class="form-input-row-4">
+            <input type="text" class="form-input" id="inputArrivalDate" placeholder="着日（例: 1/10）">
+            <select class="form-input" id="inputArrivalTime">
+              <option value="AM">午前</option>
+              <option value="PM" selected>午後</option>
+            </select>
+            <input type="number" class="form-input" id="inputPackageCount" value="1" min="1" style="text-align: center;">
+            <span style="display: flex; align-items: center; color: #a0a0b0; font-size: 0.9rem;">個口</span>
+          </div>
+        </div>
+
+        <div class="options-section">
+          <div class="options-title">⚙️ オプション</div>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="optionReason" checked>
+              返品理由を含める
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="optionList" checked>
+              リスト返送あり
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Output -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-number">3</div>
+          <h2 class="card-title">文言を生成</h2>
+        </div>
+
+        <button class="generate-btn" id="generateBtn" onclick="generateMessage()">
+          ✨ 返送文言を生成
+        </button>
+
+        <div class="output-area" id="outputArea" style="margin-top: 16px;">
+          <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 コピー</button>
+          <div class="output-placeholder" id="outputPlaceholder">
+            まずデータを読み込んでください
+          </div>
+          <div class="output-text" id="outputText" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">コピーしました！</div>
+
+  <script>
+    // GAS API URL
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzJ75BJbk-9Ks6lDWx-8PEYM3T2VBJZjg76LB3rnY7fzGuDStSuhG_65nnbZseUfg4IMQ/exec';
+
+    // Global state
+    let uploadedData = null;
+    let currentTab = 'excel';
+
+    // DOM Elements
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const resetBtn = document.getElementById('resetBtn');
+    const urlInfo = document.getElementById('urlInfo');
+    const resetUrlBtn = document.getElementById('resetUrlBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const outputPlaceholder = document.getElementById('outputPlaceholder');
+    const outputText = document.getElementById('outputText');
+    const copyBtn = document.getElementById('copyBtn');
+    const toast = document.getElementById('toast');
+
+    // Tab Switching
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      if (tab === 'excel') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('tab-excel').classList.add('active');
+      } else {
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('tab-url').classList.add('active');
+      }
+    }
+
+    // Upload Area Events
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // Handle File Upload
+    function handleFile(file) {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'text/csv'
+      ];
+      
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+        showToast('Excel または CSV ファイルを選択してください', true);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Try to get "シート2" first, then fall back to second sheet or first sheet
+          let sheetName = workbook.SheetNames.find(name => name === 'シート2');
+          if (!sheetName && workbook.SheetNames.length > 1) {
+            sheetName = workbook.SheetNames[1];
+          }
+          if (!sheetName) {
+            sheetName = workbook.SheetNames[0];
+          }
+          
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          // Filter out empty rows and header
+          uploadedData = jsonData.filter((row, index) => {
+            if (index === 0) return false; // Skip header
+            return row.some(cell => cell !== undefined && cell !== '');
+          });
+
+          // Update UI
+          uploadArea.classList.add('uploaded');
+          uploadArea.innerHTML = `
+            <div class="upload-icon">✅</div>
+            <div class="upload-text">アップロード完了</div>
+          `;
+          
+          fileInfo.style.display = 'block';
+          fileInfo.innerHTML = `📄 ${file.name}<br>商品数: ${uploadedData.length}件`;
+          
+          resetBtn.style.display = 'inline-flex';
+          outputPlaceholder.textContent = '発送情報を入力して「返送文言を生成」をクリック';
+          
+        } catch (error) {
+          console.error(error);
+          showToast('ファイルの読み込みに失敗しました', true);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Fetch Spreadsheet from URL via GAS API
+    async function fetchSpreadsheet() {
+      const url = document.getElementById('spreadsheetUrl').value.trim();
+      
+      if (!url) {
+        showToast('URLを入力してください', true);
+        return;
+      }
+
+      // Extract spreadsheet ID from URL
+      const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        showToast('無効なスプレッドシートURLです', true);
+        return;
+      }
+
+      const spreadsheetId = match[1];
+      const fetchBtn = document.getElementById('fetchBtn');
+      
+      // Show loading
+      fetchBtn.disabled = true;
+      fetchBtn.innerHTML = '<span class="loading"></span> 取得中...';
+
+      try {
+        // Fetch via GAS API
+        const apiUrl = `${GAS_API_URL}?id=${spreadsheetId}`;
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+          throw new Error('データの取得に失敗しました');
+        }
+
+        const result = await response.json();
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        if (!result.data || result.data.length === 0) {
+          throw new Error('シート2にデータがありません');
+        }
+
+        // Store data
+        uploadedData = result.data;
+
+        // Update UI
+        urlInfo.style.display = 'block';
+        urlInfo.innerHTML = `✅ データ取得完了<br>商品数: ${result.count}件`;
+        
+        resetUrlBtn.style.display = 'inline-flex';
+        outputPlaceholder.textContent = '発送情報を入力して「返送文言を生成」をクリック';
+        
+        showToast('データを取得しました！');
+
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || 'データの取得に失敗しました', true);
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.innerHTML = '📥 データを取得';
+      }
+    }
+
+    // Reset Upload
+    function resetUpload() {
+      uploadedData = null;
+      fileInput.value = '';
+      uploadArea.classList.remove('uploaded');
+      uploadArea.innerHTML = `
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">ここにExcelファイルをドロップ</div>
+        <div class="upload-subtext">または、クリックしてファイルを選択</div>
+      `;
+      fileInfo.style.display = 'none';
+      resetBtn.style.display = 'none';
+      resetOutput();
+    }
+
+    // Reset URL
+    function resetUrl() {
+      uploadedData = null;
+      document.getElementById('spreadsheetUrl').value = '';
+      urlInfo.style.display = 'none';
+      resetUrlBtn.style.display = 'none';
+      resetOutput();
+    }
+
+    // Reset Output
+    function resetOutput() {
+      outputPlaceholder.textContent = 'まずデータを読み込んでください';
+      outputPlaceholder.style.display = 'block';
+      outputText.style.display = 'none';
+      copyBtn.classList.remove('visible');
+    }
+
+    // Generate Message
+    function generateMessage() {
+      if (!uploadedData || uploadedData.length === 0) {
+        showToast('データを読み込んでください', true);
+        return;
+      }
+
+      const date = document.getElementById('inputDate').value.trim();
+      const store = document.getElementById('inputStore').value.trim();
+      const tracking = document.getElementById('inputTracking').value.trim();
+      const arrivalDate = document.getElementById('inputArrivalDate').value.trim();
+      const arrivalTime = document.getElementById('inputArrivalTime').value;
+      const packageCount = document.getElementById('inputPackageCount').value;
+      const includeReason = document.getElementById('optionReason').checked;
+      const includeListNote = document.getElementById('optionList').checked;
+
+      // Validation
+      if (!date || !store || !tracking || !arrivalDate) {
+        showToast('発送情報を入力してください', true);
+        return;
+      }
+
+      // Process data
+      const allProducts = [];
+      const redProducts = [];    // 未出品（F列に返品理由あり）
+      const orangeProducts = []; // 販売済（E列に「販売」含む）
+
+      uploadedData.forEach(row => {
+        if (!row[0] && !row[1] && !row[2]) return; // Skip empty rows
+
+        const product = {
+          no: row[0] || '',
+          brand: row[1] || '',
+          name: row[2] || '',
+          price: row[3] || '',
+          note: row[4] || '',
+          reason: row[5] || ''
+        };
+
+        allProducts.push(product);
+
+        // F列（返品理由）に記載あり → 未出品
+        if (product.reason && String(product.reason).trim() !== '') {
+          redProducts.push(product);
+        }
+        // E列（備考）に「販売」含む → 販売済
+        else if (product.note && String(product.note).includes('販売')) {
+          orangeProducts.push(product);
+        }
+      });
+
+      // Build message
+      let message = '';
+      
+      // Header
+      message += `${date} ${store}様（${allProducts.length}点在中）\n`;
+      message += `の出品作業が完了いたしました。\n`;
+
+      // 未出品（赤）
+      if (redProducts.length > 0) {
+        message += `\n下記${redProducts.length}点未出品となります。\n`;
+        redProducts.forEach(p => {
+          message += `${p.no} ${p.brand}　${p.name}`;
+          if (includeReason && p.reason) {
+            message += `（${p.reason}）`;
+          }
+          message += '\n';
+        });
+        if (includeListNote) {
+          message += `リスト赤色で色付けさせていただきました。\n`;
+        }
+      }
+
+      // 販売済（オレンジ）
+      if (orangeProducts.length > 0) {
+        message += `\n下記${orangeProducts.length}点返送前に販売となりました。\n`;
+        orangeProducts.forEach(p => {
+          message += `${p.no} ${p.brand}　${p.name}\n`;
+        });
+        if (includeListNote) {
+          message += `リストオレンジ色で色付けさせていただきました。\n`;
+        }
+      }
+
+      // Shipping info
+      message += `\n本日佐川急便にて発送致します。\n`;
+      message += `お問い合わせNO ${tracking} ${arrivalDate} ${arrivalTime}着 ${packageCount}個口\n`;
+      message += `${store}様へ発送いたします。\n`;
+      message += `宜しくお願い致します。`;
+
+      // Display output
+      outputPlaceholder.style.display = 'none';
+      outputText.style.display = 'block';
+      outputText.textContent = message;
+      copyBtn.classList.add('visible');
+    }
+
+    // Copy to Clipboard
+    function copyToClipboard() {
+      const text = outputText.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.textContent = '✓ コピー完了';
+        copyBtn.classList.add('copied');
+        showToast('コピーしました！LINEに貼り付けてください');
+        
+        setTimeout(() => {
+          copyBtn.textContent = '📋 コピー';
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('コピーしました！');
+      });
+    }
+
+    // Show Toast
+    function showToast(message, isError = false) {
+      toast.textContent = message;
+      toast.classList.toggle('error', isError);
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
